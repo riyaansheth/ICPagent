@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ICP Scoring Agent</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+
+  <div class="app-shell">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand">
+          <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.5" />
+            <path d="M16 6 L16 16 L22 22" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" />
+            <circle cx="16" cy="16" r="2.5" fill="var(--accent)" />
+          </svg>
+          <span class="brand-name">ICP<span class="brand-accent">Score</span></span>
+        </div>
+        <div class="header-status">
+          <span id="model-indicator" class="model-tag hidden">llama-3.3-70b</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main layout -->
+    <main class="main-layout">
+
+      <!-- Left column: config panels -->
+      <aside class="config-column">
+
+        <!-- API Key section -->
+        <section id="api-key-section" class="panel panel--key">
+          <div class="panel-header">
+            <span class="panel-label">01</span>
+            <h2 class="panel-title">API Keys</h2>
+          </div>
+          <div class="panel-body">
+            <div class="field-group">
+              <label class="field-label">Groq API Key</label>
+              <div class="input-group">
+                <input type="password" id="api-key-input" class="input-field" placeholder="gsk_..." autocomplete="off" spellcheck="false" />
+                <button id="api-key-toggle" class="icon-btn" title="Show/hide key" aria-label="Toggle visibility">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" />
+                    <circle cx="10" cy="10" r="2.5" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="field-group" style="margin-top: 14px;">
+              <label class="field-label">Proxycurl API Key</label>
+              <div class="input-group">
+                <input type="password" id="proxycurl-key-input" class="input-field" placeholder="Proxycurl key..." autocomplete="off" spellcheck="false" />
+                <button id="proxycurl-key-toggle" class="icon-btn" title="Show/hide key" aria-label="Toggle visibility">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" />
+                    <circle cx="10" cy="10" r="2.5" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div id="key-status" class="key-status hidden"></div>
+            <p class="hint-text">Stored locally. Proxycurl key required to bypass LinkedIn login walls. <a href="https://nubela.co/proxycurl/" target="_blank">Get a key →</a></p>
+          </div>
+        </section>
+
+        <!-- ICP Config section -->
+        <section id="icp-section" class="panel panel--icp">
+          <div class="panel-header">
+            <span class="panel-label">02</span>
+            <h2 class="panel-title">ICP Definition</h2>
+            <button id="reset-icp-btn" class="text-btn" title="Reset to defaults">Reset</button>
+          </div>
+          <div class="panel-body">
+            <div class="icp-form">
+              <div class="field-group">
+                <label class="field-label" for="icp-titles">Target Titles</label>
+                <input type="text" id="icp-titles" class="input-field" placeholder="VP RevOps, Head of Sales, CRO..." />
+                <span class="field-hint">Comma-separated role titles</span>
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="icp-industries">Industries</label>
+                <input type="text" id="icp-industries" class="input-field"
+                  placeholder="B2B SaaS, FinTech, MarTech..." />
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="icp-company-size">Company Size</label>
+                <input type="text" id="icp-company-size" class="input-field"
+                  placeholder="50–500 employees, Series A–C..." />
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="icp-geography">Geography</label>
+                <input type="text" id="icp-geography" class="input-field" placeholder="US, Canada, UK..." />
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="icp-pain-points">Pain Points</label>
+                <textarea id="icp-pain-points" class="input-field textarea-sm"
+                  placeholder="Forecasting accuracy, rep admin overhead, pipeline visibility..."></textarea>
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="icp-budget-signals">Budget Signals</label>
+                <input type="text" id="icp-budget-signals" class="input-field"
+                  placeholder="Series B+, $50M+ ARR, recent funding..." />
+              </div>
+            </div>
+            <div id="icp-save-notice" class="save-notice hidden">✓ Saved</div>
+          </div>
+        </section>
+
+      </aside>
+
+      <!-- Right column: scoring + results -->
+      <div class="scoring-column">
+
+        <!-- Prospect input -->
+        <section id="prospect-section" class="panel panel--prospect">
+          <div class="panel-header">
+            <span class="panel-label">03</span>
+            <h2 class="panel-title">LinkedIn Profile</h2>
+            <span id="char-count" class="char-count hidden">0 chars</span>
+          </div>
+          <div class="panel-body">
+            <input type="url" id="prospect-input" class="input-field" placeholder="https://linkedin.com/in/username..." autocomplete="off" />
+            <div id="prospect-error" class="field-error hidden">Please enter a valid profile URL.</div>
+          </div>
+        </section>
+
+        <!-- Score button -->
+        <div class="score-action">
+          <button id="score-btn" class="score-btn" disabled>
+            <span class="btn-text">Score Prospect</span>
+            <span class="btn-spinner hidden">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" stroke-opacity="0.2" />
+                <path d="M12 2a10 10 0 0 1 10 10" class="spin-arc" />
+              </svg>
+            </span>
+            <svg class="btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M4 10h12M10 4l6 6-6 6" />
+            </svg>
+          </button>
+          <div id="score-error" class="score-error hidden"></div>
+        </div>
+
+        <!-- Result section -->
+        <section id="result-section" class="panel panel--result hidden">
+          <div class="result-header">
+            <div class="score-ring-wrap">
+              <svg class="score-ring" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <circle class="ring-track" cx="60" cy="60" r="50" />
+                <circle class="ring-fill" cx="60" cy="60" r="50" id="ring-fill" />
+              </svg>
+              <div class="score-center">
+                <span class="score-number" id="score-number">--</span>
+                <span class="score-label">/ 100</span>
+              </div>
+            </div>
+            <div class="result-meta">
+              <div id="tier-badge" class="tier-badge">--</div>
+              <p id="result-reasoning" class="result-reasoning"></p>
+            </div>
+          </div>
+
+          <div class="profile-gist-wrap">
+            <div class="next-action-label">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 4h-10a2 2 0 0 0 -2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6a2 2 0 0 0 -2 -2z" />
+                <path d="M6 8h4M6 10h2" />
+              </svg>
+              Profile Gist
+            </div>
+            <p id="profile-summary" class="profile-summary-text"></p>
+          </div>
+
+          <div class="dimensions-grid" id="dimensions-grid">
+            <!-- Dimension cards injected by JS -->
+          </div>
+
+          <div class="next-action-wrap">
+            <div class="next-action-label">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 8h10M9 4l4 4-4 4" />
+              </svg>
+              Next Action
+            </div>
+            <p id="next-action" class="next-action-text"></p>
+          </div>
+        </section>
+
+        <!-- History section -->
+        <section id="history-section" class="panel panel--history hidden">
+          <div class="panel-header">
+            <span class="panel-label">History</span>
+            <h2 class="panel-title">Session Log</h2>
+            <button id="export-csv-btn" class="text-btn">Export CSV</button>
+          </div>
+          <div class="panel-body">
+            <div class="history-scroll">
+              <table class="history-table" id="history-table">
+                <thead>
+                  <tr>
+                    <th>Prospect</th>
+                    <th class="sortable" data-col="score">Score <span class="sort-icon">↕</span></th>
+                    <th>Tier</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody id="history-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+
+  <script type="module" src="api.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+
+</html>
